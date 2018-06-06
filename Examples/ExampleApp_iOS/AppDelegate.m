@@ -9,18 +9,23 @@
 #import "AppDelegate.h"
 #import "WebViewProxy.h"
 
-@implementation AppDelegate
+#pragma mark - TestBedViewController
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    // Override point for customization after application launch.
-    self.window.backgroundColor = [UIColor whiteColor];
-    [self.window makeKeyAndVisible];
+@interface TestBedViewController : UIViewController <UIWebViewDelegate, NSURLSessionTaskDelegate, NSURLSessionDataDelegate, NSURLSessionDelegate>
+@property (nonatomic, strong) UIWebView *webView;
+@property (nonatomic, strong) NSString *chicken_proxy_host;
+@property (nonatomic, strong) NSString *chicken_proxy_port;
+@end
 
+@implementation TestBedViewController
+ 
+- (void)loadView
+{
+    self.view = [[UIView alloc] init];
+    self.view.backgroundColor = [UIColor whiteColor];
+    
     [self _setupProxy];
     [self _createWebView];
-    
-    return YES;
 }
 
 - (void) _createWebView {
@@ -140,6 +145,57 @@
         NSURLRequest* proxyReq = [NSURLRequest requestWithURL:[NSURL URLWithString:proxyUrl]];
         [NSURLConnection connectionWithRequest:proxyReq delegate:res];
     }];
+}
+
+#pragma mark UIWebViewDelegate
+
+// You can decide what to do with redirection by implementing the delegate method below if no proxy is used.
+-(BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
+{
+    NSLog(@"request url = %@, navigation type = %ld", request.URL.absoluteString, (long)navigationType);
+//     if ([request.URL.absoluteString containsString:@"itunes.apple.com"]) {
+//         [[UIApplication sharedApplication] openURL:request.URL];
+//         return NO;
+//     }
+    return YES;
+}
+
+#pragma mark URLSessionDelegate
+
+// You need to implement the delegate method below to deal with redirection if proxy is used.
+-(void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest * _Nullable))completionHandler
+{
+    NSLog(@"response = %@, request = %@", response, request.URL.absoluteString);
+    
+    //允许服务器重定向
+    if (completionHandler)
+    {
+        completionHandler(request);
+//         NSDictionary *responseHeaders = response.allHeaderFields;
+//         if (responseHeaders && responseHeaders[@"Location"] && [responseHeaders[@"Location"] containsString:@"itunes.apple.com"]) {
+//             completionHandler(nil);
+//             [self.webView loadRequest:request];
+//         } else {
+//             completionHandler(request);
+//         }
+    }
+}
+
+@end
+
+@implementation AppDelegate
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    
+    TestBedViewController *tbvc = [[TestBedViewController alloc] init];
+    tbvc.edgesForExtendedLayout = UIRectEdgeNone;
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:tbvc];
+    self.window.rootViewController = nav;
+    self.window.backgroundColor = [UIColor whiteColor];
+    [self.window makeKeyAndVisible];
+    
+    return YES;
 }
 
 @end
